@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ORBITAL TITAN — Saturn Assault</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#020308;
+    font-family:Arial,Helvetica,sans-serif;
+    color:white;
+}
+
+canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+
+#hud{
+    position:fixed;
+    left:22px;
+    top:20px;
+    width:285px;
+    padding:18px;
+    z-index:10;
+
+    background:rgba(2,7,14,.82);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:14px;
+
+    backdrop-filter:blur(12px);
+    box-shadow:
+        0 0 35px rgba(0,0,0,.5),
+        inset 0 0 25px rgba(100,150,255,.04);
+}
+
+.title{
+    font-size:22px;
+    font-weight:bold;
+    letter-spacing:4px;
+}
+
+.subtitle{
+    margin-top:4px;
+    color:#8292a5;
+    font-size:10px;
+    letter-spacing:2px;
+}
+
+.section{
+    margin-top:15px;
+    padding-top:12px;
+    border-top:1px solid rgba(255,255,255,.1);
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    margin:8px 0;
+    font-size:13px;
+}
+
+.label{
+    color:#8190a0;
+}
+
+.value{
+    font-weight:bold;
+}
+
+.flag{
+    width:54px;
+    height:34px;
+    margin-top:12px;
+    border:1px solid rgba(255,255,255,.3);
+
+    /* historical Imperial Russian tricolor */
+    background:
+        linear-gradient(
+            to bottom,
+            #111 0%,
+            #111 33.333%,
+            #e2c21c 33.333%,
+            #e2c21c 66.666%,
+            #fff 66.666%,
+            #fff 100%
+        );
+}
+
+#mission{
+    position:fixed;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:10;
+
+    padding:12px 25px;
+
+    background:rgba(2,7,14,.72);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:10px;
+
+    backdrop-filter:blur(8px);
+
+    text-align:center;
+}
+
+#missionTitle{
+    font-size:12px;
+    color:#8293a8;
+    letter-spacing:3px;
+}
+
+#missionText{
+    margin-top:4px;
+    font-size:15px;
+    font-weight:bold;
+}
+
+#crosshair{
+    position:fixed;
+    left:50%;
+    top:50%;
+
+    width:42px;
+    height:42px;
+
+    transform:translate(-50%,-50%);
+
+    border:1px solid rgba(130,210,255,.8);
+    border-radius:50%;
+
+    z-index:9;
+    pointer-events:none;
+
+    box-shadow:
+        0 0 15px rgba(60,180,255,.25);
+}
+
+#crosshair::before{
+    content:"";
+    position:absolute;
+
+    width:60px;
+    height:1px;
+
+    left:-10px;
+    top:20px;
+
+    background:rgba(130,210,255,.7);
+}
+
+#crosshair::after{
+    content:"";
+    position:absolute;
+
+    width:1px;
+    height:60px;
+
+    left:20px;
+    top:-10px;
+
+    background:rgba(130,210,255,.7);
+}
+
+#controls{
+    position:fixed;
+
+    left:50%;
+    bottom:20px;
+
+    transform:translateX(-50%);
+
+    padding:11px 20px;
+
+    background:rgba(0,0,0,.7);
+    border-radius:9px;
+
+    color:#9eacbb;
+    font-size:12px;
+
+    z-index:10;
+
+    white-space:nowrap;
+}
+
+#status{
+    position:fixed;
+
+    right:25px;
+    bottom:75px;
+
+    z-index:10;
+
+    padding:12px 17px;
+
+    background:rgba(2,7,14,.8);
+
+    border:1px solid rgba(100,180,255,.2);
+    border-radius:9px;
+
+    color:#7fcaff;
+    font-size:12px;
+}
+
+#lock{
+    position:fixed;
+
+    right:25px;
+    top:255px;
+
+    z-index:10;
+
+    padding:10px 15px;
+
+    background:rgba(0,0,0,.55);
+
+    border-radius:8px;
+
+    color:#91a4b8;
+    font-size:11px;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+
+    <div class="title">
+        ORBITAL TITAN
+    </div>
+
+    <div class="subtitle">
+        DEEP SPACE COMBAT SIMULATION
+    </div>
+
+    <div class="flag"></div>
+
+    <div class="section">
+
+        <div class="row">
+            <span class="label">Корабль</span>
+            <span class="value">RF ORION</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Статус</span>
+            <span class="value" id="shipStatus">ONLINE</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Ракеты</span>
+            <span class="value" id="missiles">48</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Энергия</span>
+            <span class="value" id="energy">100%</span>
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <div class="row">
+            <span class="label">Базы</span>
+            <span class="value" id="bases">8</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Уничтожено</span>
+            <span class="value" id="destroyed">0</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Счёт</span>
+            <span class="value" id="score">0</span>
+        </div>
+
+    </div>
+
+</div>
+
+<div id="mission">
+    <div id="missionTitle">
+        SATURN SYSTEM
+    </div>
+
+    <div id="missionText">
+        TITAN — TARGET ZONE
+    </div>
+</div>
+
+<div id="lock">
+    TARGET: <b id="targetText">NONE</b>
+</div>
+
+<div id="status">
+    NAVIGATION: ACTIVE
+</div>
+
+<div id="crosshair"></div>
+
+<div id="controls">
+    W A S D — движение &nbsp; | &nbsp;
+    SPACE — ракета &nbsp; | &nbsp;
+    SHIFT — ускорение &nbsp; | &nbsp;
+    R — восстановить энергию
+</div>
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+function resize(){
+
+    canvas.width=innerWidth;
+    canvas.height=innerHeight;
+
+}
+
+resize();
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+const keys={};
+
+let mouseX=innerWidth/2;
+let mouseY=innerHeight/2;
+
+let missiles=48;
+let energy=100;
+let score=0;
+let destroyed=0;
+
+let cameraX=0;
+let cameraY=0;
+
+let target=null;
+
+const stars=[];
+const rockets=[];
+const explosions=[];
+const particles=[];
+const bases=[];
+
+
+/* =========================================================
+   STAR FIELD
+========================================================= */
+
+for(let i=0;i<700;i++){
+
+    stars.push({
+
+        x:Math.random()*innerWidth,
+        y:Math.random()*innerHeight,
+
+        z:.2+Math.random()*.8,
+
+        size:.3+Math.random()*1.5
+
+    });
+
+}
+
+
+/* =========================================================
+   TITAN
+========================================================= */
+
+const titan={
+
+    x:canvas.width*.67,
+    y:canvas.height*.68,
+
+    radius:
+        Math.min(
+            canvas.width,
+            canvas.height
+        )*.30
+
+};
+
+
+/* =========================================================
+   PLAYER SHIP
+========================================================= */
+
+const ship={
+
+    x:canvas.width*.28,
+    y:canvas.height*.58,
+
+    vx:0,
+    vy:0,
+
+    angle:0,
+
+    speed:.32,
+
+    boost:.65
+
+};
+
+
+/* =========================================================
+   BASES
+========================================================= */
+
+function createBases(){
+
+    bases.length=0;
+
+    for(let i=0;i<8;i++){
+
+        const angle=
+            (Math.PI*2/8)*i;
+
+        const radius=
+            titan.radius*.62;
+
+        bases.push({
+
+            angle,
+
+            distance:radius,
+
+            health:100,
+
+            pulse:
+                Math.random()*10,
+
+            size:
+                10+Math.random()*8
+
+        });
+
+    }
+
+}
+
+createBases();
+
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    e=>{
+
+        keys[e.key.toLowerCase()]=true;
+
+        if(e.code==="Space"){
+
+            e.preventDefault();
+
+            fireRocket();
+
+        }
+
+        if(e.key.toLowerCase()==="r"){
+
+            energy=
+                Math.min(
+                    100,
+                    energy+20
+                );
+
+        }
+
+    }
+);
+
+document.addEventListener(
+    "keyup",
+    e=>{
+
+        keys[e.key.toLowerCase()]=false;
+
+    }
+);
+
+
+/* =========================================================
+   MOUSE
+========================================================= */
+
+document.addEventListener(
+    "mousemove",
+    e=>{
+
+        mouseX=e.clientX;
+        mouseY=e.clientY;
+
+        ship.angle=
+            Math.atan2(
+                mouseY-ship.y,
+                mouseX-ship.x
+            );
+
+    }
+);
+
+
+/* =========================================================
+   TITAN POSITION
+========================================================= */
+
+function updateTitan(){
+
+    titan.x=
+        canvas.width*.68;
+
+    titan.y=
+        canvas.height*.69;
+
+    titan.radius=
+        Math.min(
+            canvas.width,
+            canvas.height
+        )*.31;
+
+}
+
+
+/* =========================================================
+   SATURN
+========================================================= */
+
+function drawSaturn(){
+
+    const x=
+        canvas.width*.83;
+
+    const y=
+        canvas.height*.23;
+
+    const radius=
+        Math.min(
+            canvas.width,
+            canvas.height
+        )*.23;
+
+    /*
+       atmospheric glow
+    */
+
+    const glow=
+        ctx.createRadialGradient(
+            x,
+            y,
+            radius*.7,
+            x,
+            y,
+            radius*1.45
+        );
+
+    glow.addColorStop(
+        0,
+        "rgba(215,180,105,.16)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=glow;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        radius*1.45,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       back rings
+    */
+
+    ctx.save();
+
+    ctx.translate(x,y);
+
+    ctx.rotate(-.18);
+
+    ctx.strokeStyle=
+        "rgba(180,155,105,.28)";
+
+    ctx.lineWidth=18;
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        0,
+        radius*1.85,
+        radius*.52,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+    ctx.strokeStyle=
+        "rgba(230,210,165,.25)";
+
+    ctx.lineWidth=5;
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        0,
+        radius*1.55,
+        radius*.43,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+
+
+    /*
+       planet
+    */
+
+    const planet=
+        ctx.createRadialGradient(
+            x-radius*.3,
+            y-radius*.35,
+            radius*.1,
+
+            x,
+            y,
+            radius
+        );
+
+    planet.addColorStop(
+        0,
+        "#d7bd82"
+    );
+
+    planet.addColorStop(
+        .45,
+        "#9b8358"
+    );
+
+    planet.addColorStop(
+        .78,
+        "#62543e"
+    );
+
+    planet.addColorStop(
+        1,
+        "#171718"
+    );
+
+    ctx.fillStyle=planet;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        radius,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       atmospheric bands
+    */
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        radius*.98,
+        0,
+        Math.PI*2
+    );
+
+    ctx.clip();
+
+    for(
+        let i=-5;
+        i<6;
+        i++
+    ){
+
+        ctx.fillStyle=
+            i%2===0
+            ? "rgba(245,220,160,.08)"
+            : "rgba(60,45,30,.07)";
+
+        ctx.fillRect(
+            x-radius,
+            y+i*radius*.15,
+            radius*2,
+            radius*.08
+        );
+
+    }
+
+    ctx.restore();
+
+
+    /*
+       front rings
+    */
+
+    ctx.save();
+
+    ctx.translate(x,y);
+    ctx.rotate(-.18);
+
+    ctx.strokeStyle=
+        "rgba(225,200,150,.36)";
+
+    ctx.lineWidth=9;
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        0,
+        radius*1.85,
+        radius*.52,
+        0,
+        Math.PI,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+   TITAN
+========================================================= */
+
+function drawTitan(){
+
+    updateTitan();
+
+    const x=titan.x;
+    const y=titan.y;
+    const r=titan.radius;
+
+
+    /*
+       haze
+    */
+
+    const haze=
+        ctx.createRadialGradient(
+            x-r*.25,
+            y-r*.25,
+            r*.1,
+            x,
+            y,
+            r*1.3
+        );
+
+    haze.addColorStop(
+        0,
+        "#d99b55"
+    );
+
+    haze.addColorStop(
+        .45,
+        "#a66c39"
+    );
+
+    haze.addColorStop(
+        .78,
+        "#633f28"
+    );
+
+    haze.addColorStop(
+        1,
+        "#17100d"
+    );
+
+    ctx.fillStyle=haze;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        r,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       atmospheric halo
+    */
+
+    ctx.strokeStyle=
+        "rgba(220,165,100,.18)";
+
+    ctx.lineWidth=18;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        r+4,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    /*
+       terrain
+    */
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        r*.985,
+        0,
+        Math.PI*2
+    );
+
+    ctx.clip();
+
+    for(let i=0;i<90;i++){
+
+        const px=
+            x-r+
+            Math.random()*r*2;
+
+        const py=
+            y-r+
+            Math.random()*r*2;
+
+        const dx=px-x;
+        const dy=py-y;
+
+        if(
+            Math.sqrt(
+                dx*dx+dy*dy
+            )<r
+        ){
+
+            ctx.fillStyle=
+                "rgba(40,20,10,.12)";
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                px,
+                py,
+                15+Math.random()*35,
+                3+Math.random()*8,
+                Math.random(),
+                0,
+                Math.PI*2
+            );
+
+            ctx.fill();
+
+        }
+
+    }
+
+    /*
+       methane lakes
+    */
+
+    ctx.fillStyle=
+        "rgba(25,45,50,.5)";
+
+    for(let i=0;i<7;i++){
+
+        const lx=
+            x-r*.6+
+            Math.random()*r*1.2;
+
+        const ly=
+            y-r*.6+
+            Math.random()*r*1.2;
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            lx,
+            ly,
+            20+Math.random()*35,
+            7+Math.random()*15,
+            Math.random(),
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+    }
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+   BASES
+========================================================= */
+
+function drawBases(){
+
+    const x=titan.x;
+    const y=titan.y;
+    const r=titan.radius;
+
+    for(let i=0;i<bases.length;i++){
+
+        const b=bases[i];
+
+        if(b.health<=0) continue;
+
+        b.pulse+=.04;
+
+        const bx=
+            x+
+            Math.cos(b.angle)*
+            b.distance;
+
+        const by=
+            y+
+            Math.sin(b.angle)*
+            b.distance*.55;
+
+
+        /*
+           radar glow
+        */
+
+        ctx.shadowBlur=
+            15+
+            Math.sin(b.pulse)*5;
+
+        ctx.shadowColor=
+            "#ff533c";
+
+
+        /*
+           base
+        */
+
+        ctx.fillStyle="#20252a";
+
+        ctx.fillRect(
+            bx-b.size,
+            by-b.size*.45,
+            b.size*2,
+            b.size*.9
+        );
+
+
+        /*
+           tower
+        */
+
+        ctx.fillStyle="#59626a";
+
+        ctx.fillRect(
+            bx-3,
+            by-b.size*1.8,
+            6,
+            b.size*1.4
+        );
+
+
+        /*
+           warning light
+        */
+
+        ctx.fillStyle="#ff4b3c";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            bx,
+            by-b.size*1.9,
+            3,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+        ctx.shadowBlur=0;
+
+
+        /*
+           base label
+        */
+
+        ctx.fillStyle=
+            "rgba(255,180,120,.8)";
+
+        ctx.font="10px Arial";
+
+        ctx.fillText(
+            "BASE-"+(i+1),
+            bx-20,
+            by+b.size*1.8
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAYER SHIP
+========================================================= */
+
+function drawShip(){
+
+    const x=ship.x;
+    const y=ship.y;
+
+    ctx.save();
+
+    ctx.translate(x,y);
+
+    ctx.rotate(ship.angle);
+
+
+    /*
+       engine glow
+    */
+
+    const glow=
+        ctx.createRadialGradient(
+            -38,
+            0,
+            2,
+            -38,
+            0,
+            45
+        );
+
+    glow.addColorStop(
+        0,
+        "rgba(255,255,255,.9)"
+    );
+
+    glow.addColorStop(
+        .2,
+        "rgba(80,190,255,.8)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,100,255,0)"
+    );
+
+    ctx.fillStyle=glow;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        -38,
+        0,
+        45,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       hull
+    */
+
+    ctx.fillStyle="#b7c0c8";
+
+    ctx.beginPath();
+
+    ctx.moveTo(45,0);
+    ctx.lineTo(-22,-17);
+    ctx.lineTo(-43,0);
+    ctx.lineTo(-22,17);
+
+    ctx.closePath();
+
+    ctx.fill();
+
+
+    /*
+       wings
+    */
+
+    ctx.fillStyle="#667482";
+
+    ctx.beginPath();
+
+    ctx.moveTo(-5,-10);
+    ctx.lineTo(-38,-38);
+    ctx.lineTo(-20,-5);
+
+    ctx.closePath();
+
+    ctx.fill();
+
+    ctx.beginPath();
+
+    ctx.moveTo(-5,10);
+    ctx.lineTo(-38,38);
+    ctx.lineTo(-20,5);
+
+    ctx.closePath();
+
+    ctx.fill();
+
+
+    /*
+       cockpit
+    */
+
+    ctx.fillStyle="#172738";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        12,
+        0,
+        15,
+        8,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       Russian Federation identification
+       + historical imperial flag
+    */
+
+    ctx.fillStyle="#111";
+
+    ctx.fillRect(
+        -8,
+        -25,
+        27,
+        5
+    );
+
+    ctx.fillStyle="#e3c21c";
+
+    ctx.fillRect(
+        -8,
+        -20,
+        27,
+        5
+    );
+
+    ctx.fillStyle="#fff";
+
+    ctx.fillRect(
+        -8,
+        -15,
+        27,
+        5
+    );
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+   ROCKET
+========================================================= */
+
+function fireRocket(){
+
+    if(missiles<=0) return;
+
+    if(energy<4) return;
+
+    missiles--;
+    energy-=4;
+
+
+    /*
+       target closest to crosshair
+    */
+
+    let closest=null;
+    let best=Infinity;
+
+    for(const b of bases){
+
+        if(b.health<=0) continue;
+
+        const bx=
+            titan.x+
+            Math.cos(b.angle)*
+            b.distance;
+
+        const by=
+            titan.y+
+            Math.sin(b.angle)*
+            b.distance*.55;
+
+        const dx=bx-mouseX;
+        const dy=by-mouseY;
+
+        const d=
+            Math.sqrt(
+                dx*dx+dy*dy
+            );
+
+        if(d<best){
+
+            best=d;
+            closest=b;
+
+        }
+
+    }
+
+    if(!closest) return;
+
+    target=closest;
+
+
+    /*
+       rocket direction
+    */
+
+    const tx=
+        titan.x+
+        Math.cos(closest.angle)*
+        closest.distance;
+
+    const ty=
+        titan.y+
+        Math.sin(closest.angle)*
+        closest.distance*.55;
+
+    const dx=tx-ship.x;
+    const dy=ty-ship.y;
+
+    const dist=
+        Math.sqrt(
+            dx*dx+
+            dy*dy
+        );
+
+    rockets.push({
+
+        x:ship.x,
+        y:ship.y,
+
+        vx:dx/dist*10,
+        vy:dy/dist*10,
+
+        target:closest,
+
+        life:260
+
+    });
+
+}
+
+
+/* =========================================================
+   ROCKET UPDATE
+========================================================= */
+
+function updateRockets(){
+
+    for(
+        let i=rockets.length-1;
+        i>=0;
+        i--
+    ){
+
+        const r=rockets[i];
+
+        /*
+           homing
+        */
+
+        if(
+            r.target &&
+            r.target.health>0
+        ){
+
+            const tx=
+                titan.x+
+                Math.cos(
+                    r.target.angle
+                )*
+                r.target.distance;
+
+            const ty=
+                titan.y+
+                Math.sin(
+                    r.target.angle
+                )*
+                r.target.distance*.55;
+
+            const dx=tx-r.x;
+            const dy=ty-r.y;
+
+            const dist=
+                Math.sqrt(
+                    dx*dx+
+                    dy*dy
+                );
+
+            const desiredX=
+                dx/dist*10;
+
+            const desiredY=
+                dy/dist*10;
+
+            r.vx=
+                r.vx*.92+
+                desiredX*.08;
+
+            r.vy=
+                r.vy*.92+
+                desiredY*.08;
+
+        }
+
+        r.x+=r.vx;
+        r.y+=r.vy;
+
+        r.life--;
+
+        /*
+           trail
+        */
+
+        particles.push({
+
+            x:r.x,
+            y:r.y,
+
+            vx:-r.vx*.08,
+            vy:-r.vy*.08,
+
+            life:25,
+
+            size:2+Math.random()*2,
+
+            type:"rocket"
+
+        });
+
+
+        /*
+           hit
+        */
+
+        if(
+            r.target &&
+            r.target.health>0
+        ){
+
+            const tx=
+                titan.x+
+                Math.cos(
+                    r.target.angle
+                )*
+                r.target.distance;
+
+            const ty=
+                titan.y+
+                Math.sin(
+                    r.target.angle
+                )*
+                r.target.distance*.55;
+
+            const dx=
+                r.x-tx;
+
+            const dy=
+                r.y-ty;
+
+            const dist=
+                Math.sqrt(
+                    dx*dx+
+                    dy*dy
+                );
+
+            if(dist<25){
+
+                r.target.health=0;
+
+                explode(
+                    tx,
+                    ty
+                );
+
+                destroyed++;
+                score+=500;
+
+                rockets.splice(i,1);
+
+                target=null;
+
+                continue;
+
+            }
+
+        }
+
+
+        if(r.life<=0){
+
+            rockets.splice(i,1);
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   EXPLOSIONS
+========================================================= */
+
+function explode(x,y){
+
+    explosions.push({
+
+        x,
+        y,
+
+        radius:5,
+
+        alpha:1
+
+    });
+
+
+    for(let i=0;i<45;i++){
+
+        const a=
+            Math.random()*
+            Math.PI*2;
+
+        const speed=
+            1+
+            Math.random()*5;
+
+        particles.push({
+
+            x,
+            y,
+
+            vx:Math.cos(a)*speed,
+            vy:Math.sin(a)*speed,
+
+            life:40+Math.random()*40,
+
+            size:2+Math.random()*4,
+
+            type:"fire"
+
+        });
+
+    }
+
+}
+
+
+/* =========================================================
+   EXPLOSIONS UPDATE
+========================================================= */
+
+function updateExplosions(){
+
+    for(
+        let i=explosions.length-1;
+        i>=0;
+        i--
+    ){
+
+        const e=explosions[i];
+
+        e.radius+=5;
+        e.alpha-=.025;
+
+        if(e.alpha<=0){
+
+            explosions.splice(i,1);
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+function updateParticles(){
+
+    for(
+        let i=particles.length-1;
+        i>=0;
+        i--
+    ){
+
+        const p=particles[i];
+
+        p.x+=p.vx;
+        p.y+=p.vy;
+
+        p.vx*=.98;
+        p.vy*=.98;
+
+        p.life--;
+
+        if(p.life<=0){
+
+            particles.splice(i,1);
+
+        }
+
+    }
+
+}
+
+
+function drawParticles(){
+
+    for(const p of particles){
+
+        const alpha=
+            Math.max(
+                0,
+                p.life/50
+            );
+
+        if(p.type==="rocket"){
+
+            ctx.fillStyle=
+                `rgba(90,200,255,${alpha})`;
+
+        }else{
+
+            ctx.fillStyle=
+                `rgba(255,150,40,${alpha})`;
+
+        }
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            p.size,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =========================================================
+   ROCKET DRAW
+========================================================= */
+
+function drawRockets(){
+
+    for(const r of rockets){
+
+        const angle=
+            Math.atan2(
+                r.vy,
+                r.vx
+            );
+
+        ctx.save();
+
+        ctx.translate(
+            r.x,
+            r.y
+        );
+
+        ctx.rotate(angle);
+
+
+        /*
+           exhaust
+        */
+
+        const g=
+            ctx.createLinearGradient(
+                -60,
+                0,
+                0,
+                0
+            );
+
+        g.addColorStop(
+            0,
+            "rgba(0,100,255,0)"
+        );
+
+        g.addColorStop(
+            .6,
+            "#54bfff"
+        );
+
+        g.addColorStop(
+            1,
+            "#ffffff"
+        );
+
+        ctx.strokeStyle=g;
+
+        ctx.lineWidth=4;
+
+        ctx.beginPath();
+
+        ctx.moveTo(-65,0);
+        ctx.lineTo(0,0);
+
+        ctx.stroke();
+
+
+        /*
+           body
+        */
+
+        ctx.fillStyle="#d7dde2";
+
+        ctx.beginPath();
+
+        ctx.moveTo(17,0);
+        ctx.lineTo(-10,-4);
+        ctx.lineTo(-15,0);
+        ctx.lineTo(-10,4);
+
+        ctx.closePath();
+
+        ctx.fill();
+
+
+        ctx.restore();
+
+    }
+
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+function drawBackground(){
+
+    const gradient=
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            canvas.height
+        );
+
+    gradient.addColorStop(
+        0,
+        "#010208"
+    );
+
+    gradient.addColorStop(
+        .55,
+        "#050b16"
+    );
+
+    gradient.addColorStop(
+        1,
+        "#0b0805"
+    );
+
+    ctx.fillStyle=gradient;
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    /*
+       stars with parallax
+    */
+
+    for(const s of stars){
+
+        const x=
+            s.x-
+            cameraX*s.z*.05;
+
+        const y=
+            s.y-
+            cameraY*s.z*.05;
+
+        ctx.fillStyle=
+            `rgba(210,225,255,${.25+s.z*.65})`;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            (x+canvas.width)%canvas.width,
+            (y+canvas.height)%canvas.height,
+            s.size*s.z,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+    }
+
+}
+
+
+/* =========================================================
+   SHIP MOVEMENT
+========================================================= */
+
+function updateShip(){
+
+    let ax=0;
+    let ay=0;
+
+    if(keys["w"]) ay-=1;
+    if(keys["s"]) ay+=1;
+    if(keys["a"]) ax-=1;
+    if(keys["d"]) ax+=1;
+
+    const boost=
+        keys["shift"]
+        ? ship.boost
+        : ship.speed;
+
+    ship.vx+=ax*boost;
+    ship.vy+=ay*boost;
+
+
+    /*
+       friction
+    */
+
+    ship.vx*=.91;
+    ship.vy*=.91;
+
+
+    /*
+       maximum speed
+    */
+
+    const max=
+        keys["shift"]
+        ? 8
+        : 4.5;
+
+    const speed=
+        Math.sqrt(
+            ship.vx*ship.vx+
+            ship.vy*ship.vy
+        );
+
+    if(speed>max){
+
+        ship.vx=
+            ship.vx/speed*max;
+
+        ship.vy=
+            ship.vy/speed*max;
+
+    }
+
+
+    ship.x+=ship.vx;
+    ship.y+=ship.vy;
+
+
+    /*
+       boundaries
+    */
+
+    ship.x=
+        Math.max(
+            40,
+            Math.min(
+                canvas.width-40,
+                ship.x
+            )
+        );
+
+    ship.y=
+        Math.max(
+            40,
+            Math.min(
+                canvas.height-40,
+                ship.y
+            )
+        );
+
+
+    /*
+       energy recovery
+    */
+
+    energy=
+        Math.min(
+            100,
+            energy+.01
+        );
+
+}
+
+
+/* =========================================================
+   EXPLOSION DRAW
+========================================================= */
+
+function drawExplosions(){
+
+    for(const e of explosions){
+
+        ctx.shadowBlur=30;
+
+        ctx.shadowColor=
+            "#ff701f";
+
+        ctx.strokeStyle=
+            `rgba(255,170,60,${e.alpha})`;
+
+        ctx.lineWidth=5;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            e.x,
+            e.y,
+            e.radius,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+
+        ctx.shadowBlur=0;
+
+    }
+
+}
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+function updateHUD(){
+
+    document.getElementById(
+        "missiles"
+    ).textContent=missiles;
+
+    document.getElementById(
+        "energy"
+    ).textContent=
+        Math.round(energy)+"%";
+
+    document.getElementById(
+        "destroyed"
+    ).textContent=destroyed;
+
+    document.getElementById(
+        "score"
+    ).textContent=score;
+
+    const remaining=
+        bases.filter(
+            b=>b.health>0
+        ).length;
+
+    document.getElementById(
+        "bases"
+    ).textContent=remaining;
+
+
+    if(target){
+
+        const index=
+            bases.indexOf(target);
+
+        document.getElementById(
+            "targetText"
+        ).textContent=
+            "BASE-"+(index+1);
+
+    }else{
+
+        document.getElementById(
+            "targetText"
+        ).textContent=
+            "NONE";
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+function gameLoop(){
+
+    updateShip();
+
+    updateRockets();
+
+    updateExplosions();
+
+    updateParticles();
+
+
+    /*
+       camera follows movement slightly
+    */
+
+    cameraX=
+        ship.x-canvas.width*.5;
+
+    cameraY=
+        ship.y-canvas.height*.55;
+
+
+    drawBackground();
+
+    drawSaturn();
+
+    drawTitan();
+
+    drawBases();
+
+    drawParticles();
+
+    drawRockets();
+
+    drawShip();
+
+    drawExplosions();
+
+    updateHUD();
+
+
+    /*
+       victory
+    */
+
+    if(
+        bases.every(
+            b=>b.health<=0
+        )
+    ){
+
+        document.getElementById(
+            "missionText"
+        ).textContent=
+            "MISSION COMPLETE";
+
+        document.getElementById(
+            "status"
+        ).textContent=
+            "ALL TARGETS DESTROYED";
+
+    }
+
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+}
+
+gameLoop();
+
+</script>
+
+</body>
+</html>
